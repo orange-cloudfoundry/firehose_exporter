@@ -71,6 +71,22 @@ var (
 		"logging.url", "Cloud Foundry Logging endpoint ($FIREHOSE_EXPORTER_LOGGING_URL)",
 	).Envar("FIREHOSE_EXPORTER_LOGGING_URL").Required().String()
 
+	loggingUseRLPGateway = kingpin.Flag(
+		"logging.use-rlp-gateway", "Use rlp gateway instead of grpc gateway (slower and use websocket)",
+	).Envar("FIREHOSE_EXPORTER_LOGGING_USE_RLP_GATEWAY").Required().Bool()
+
+	loggingTLSCa = kingpin.Flag(
+		"logging.tls.ca", "Path to ca cert to connect to rlp",
+	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_CA").Required().String()
+
+	loggingTLSCert = kingpin.Flag(
+		"logging.tls.cert", "Path to cert to connect to rlp in mtls",
+	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_CERT").Required().String()
+
+	loggingTLSKey = kingpin.Flag(
+		"logging.tls.key", "Path to key to connect to rlp in mtls",
+	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_KEY").Required().String()
+
 	useLegacyFirehose = kingpin.Flag(
 		"logging.use-legacy-firehose", "Whether to use the v1 firehose rather than the RLP ($USE_LEGACY_FIREHOSE)",
 	).Envar("USE_LEGACY_FIREHOSE").Bool()
@@ -244,13 +260,20 @@ func startLogStream(metricsStore *metrics.Store) {
 	ac := authclient.NewHttp(uaa, *uaaClientID, *uaaClientSecret, *skipSSLValidation)
 	ls := logstream.New(
 		*loggingURL,
+		*loggingTLSCa,
+		*loggingTLSCert,
+		*loggingTLSKey,
+		*loggingUseRLPGateway,
 		*skipSSLValidation,
 		*dopplerSubscriptionID,
 		metricsStore,
 		ac,
 	)
 	go func() {
-		ls.Start()
+		err := ls.Start()
+		if err != nil {
+			log.Errorf("Error when starting consumer: %s", err.Error())
+		}
 		os.Exit(1)
 	}()
 }

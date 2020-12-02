@@ -1,8 +1,9 @@
 package logstream
 
 import (
-	"code.cloudfoundry.org/go-loggregator"
 	"net/http"
+
+	"code.cloudfoundry.org/go-loggregator"
 
 	"github.com/cloudfoundry/sonde-go/events"
 	"github.com/prometheus/common/log"
@@ -12,6 +13,10 @@ import (
 
 type LogStream struct {
 	url               string
+	caPath            string
+	certPath          string
+	keyPath           string
+	useRLPGateway     bool
 	skipSSLValidation bool
 	subscriptionID    string
 	metricsStore      *metrics.Store
@@ -26,6 +31,10 @@ type doer interface {
 
 func New(
 	url string,
+	caPath string,
+	certPath string,
+	keyPath string,
+	useRLPGateway bool,
 	skipSSLValidation bool,
 	subscriptionID string,
 	metricsStore *metrics.Store,
@@ -33,6 +42,10 @@ func New(
 ) *LogStream {
 	return &LogStream{
 		url:               url,
+		caPath:            caPath,
+		certPath:          certPath,
+		keyPath:           keyPath,
+		useRLPGateway:     useRLPGateway,
 		skipSSLValidation: skipSSLValidation,
 		subscriptionID:    subscriptionID,
 		metricsStore:      metricsStore,
@@ -43,20 +56,46 @@ func New(
 
 // Start processes both errors and messages until both channels are closed
 // It then closes the underlying consumer.
-func (n *LogStream) Start() {
+func (n *LogStream) Start() error {
 	log.Info("Starting Firehose Nozzle...")
 	defer log.Info("Firehose Nozzle shutting down...")
-	n.consumeLogstream()
+	err := n.consumeLogstream()
+	if err != nil {
+		return err
+	}
 	n.parseEnvelopes()
+	return nil
 }
 
-func (n *LogStream) consumeLogstream() {
-	rlpGatewayClient := loggregator.NewRLPGatewayClient(
-		n.url,
-		loggregator.WithRLPGatewayHTTPClient(n.httpClient),
-	)
-	a := NewV2Adapter(rlpGatewayClient)
+func (n *LogStream) consumeLogstream() error {
+	streamer, err := n.buildStreamer()
+	if err != nil {
+		return err
+	}
+	a := NewV2Adapter(streamer)
 	n.messages = a.Firehose(n.subscriptionID)
+	return nil
+}
+
+func (n *LogStream) buildStreamer() (Streamer, error) {
+	if n.useRLPGateway {
+		return loggregator.NewRLPGatewayClient(
+			n.url,
+			loggregator.WithRLPGatewayHTTPClient(n.httpClient),
+		), nil
+	}
+	loggregatorTLSConfig, err := loggregator.NewEgressTLSConfig(n.caPath, n.certPath, n.keyPath)
+	if err != nil {
+		return nil, err
+	}
+	loggregatorTLSConfig.InsecureSkipVerify = n.skipSSLValidation
+	return loggregator.NewEnvelopeStreamConnector(
+		n.url,
+		loggregatorTLSConfig,
+		loggregator.WithEnvelopeStreamBuffer(10000, func(missed int) {
+			log.Infof("dropped %d envelope batches", missed)
+		}),
+	), nil
 }
 
 // parseEnvelopes will read and process both errs and messages, until

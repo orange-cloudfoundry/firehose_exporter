@@ -1,12 +1,13 @@
 package logstream_test
 
 import (
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"fmt"
+	"time"
+
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"github.com/bosh-prometheus/firehose_exporter/authclient"
 	"github.com/bosh-prometheus/firehose_exporter/logstream"
 	"github.com/cloudfoundry-incubator/uaago"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -85,6 +86,10 @@ var _ = Describe("LogStream", func() {
 
 		ls = logstream.New(
 			fakeLogStream.URL(),
+			"",
+			"",
+			"",
+			true,
 			skipSSLValidation,
 			subscriptionID,
 			metricsStore,
