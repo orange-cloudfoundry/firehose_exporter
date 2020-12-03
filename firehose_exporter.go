@@ -77,15 +77,15 @@ var (
 
 	loggingTLSCa = kingpin.Flag(
 		"logging.tls.ca", "Path to ca cert to connect to rlp",
-	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_CA").Required().String()
+	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_CA").Default("").String()
 
 	loggingTLSCert = kingpin.Flag(
 		"logging.tls.cert", "Path to cert to connect to rlp in mtls",
-	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_CERT").Required().String()
+	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_CERT").Default("").String()
 
 	loggingTLSKey = kingpin.Flag(
 		"logging.tls.key", "Path to key to connect to rlp in mtls",
-	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_KEY").Required().String()
+	).Envar("FIREHOSE_EXPORTER_LOGGING_TLS_KEY").Default("").String()
 
 	useLegacyFirehose = kingpin.Flag(
 		"logging.use-legacy-firehose", "Whether to use the v1 firehose rather than the RLP ($USE_LEGACY_FIREHOSE)",
