@@ -73,7 +73,7 @@ var (
 
 	loggingUseRLPGateway = kingpin.Flag(
 		"logging.use-rlp-gateway", "Use rlp gateway instead of grpc gateway (slower and use websocket)",
-	).Envar("FIREHOSE_EXPORTER_LOGGING_USE_RLP_GATEWAY").Required().Bool()
+	).Envar("FIREHOSE_EXPORTER_LOGGING_USE_RLP_GATEWAY").Default("false").Bool()
 
 	loggingTLSCa = kingpin.Flag(
 		"logging.tls.ca", "Path to ca cert to connect to rlp",
